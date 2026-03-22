@@ -15,7 +15,9 @@ export async function GET(req: NextRequest) {
 
     await connectDB()
 
-    const todayStr = new Date().toISOString().split('T')[0]
+    // Use IST (UTC+5:30) for "today"
+    const istOffset = 5.5 * 60 * 60 * 1000
+    const todayStr = new Date(Date.now() + istOffset).toISOString().split('T')[0]
     const today = new Date(todayStr + 'T00:00:00.000Z')
     const todayEnd = new Date(todayStr + 'T23:59:59.999Z')
 

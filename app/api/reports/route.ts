@@ -21,8 +21,9 @@ export async function GET(req: NextRequest) {
     const endDate = searchParams.get('endDate')
     const workerId = searchParams.get('workerId')
 
-    const startStr = startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
-    const endStr = endDate || new Date().toISOString().split('T')[0]
+    const istOffset = 5.5 * 60 * 60 * 1000
+    const startStr = startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000 + istOffset).toISOString().split('T')[0]
+    const endStr = endDate || new Date(Date.now() + istOffset).toISOString().split('T')[0]
     const start = new Date(startStr + 'T00:00:00.000Z')
     const end = new Date(endStr + 'T23:59:59.999Z')
 
