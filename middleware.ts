@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { jwtVerify } from 'jose'
 
 const PUBLIC_PATHS = ['/login', '/api/auth/login', '/api/auth/seed']
 
@@ -8,13 +7,43 @@ const STATIC_EXTENSIONS = [
   '.woff', '.woff2', '.ttf', '.otf', '.css', '.js', '.map'
 ]
 
-function getJWTSecret() {
-  return new TextEncoder().encode(process.env.JWT_SECRET || 'fallback-secret')
+function base64UrlDecode(str: string): Uint8Array {
+  const base64 = str.replace(/-/g, '+').replace(/_/g, '/')
+  const padded = base64 + '='.repeat((4 - (base64.length % 4)) % 4)
+  const binary = atob(padded)
+  const bytes = new Uint8Array(binary.length)
+  for (let i = 0; i < binary.length; i++) {
+    bytes[i] = binary.charCodeAt(i)
+  }
+  return bytes
 }
 
 async function verifyJWT(token: string): Promise<boolean> {
   try {
-    await jwtVerify(token, getJWTSecret())
+    const parts = token.split('.')
+    if (parts.length !== 3) return false
+
+    const secret = process.env.JWT_SECRET || 'fallback-secret'
+    const keyData = new TextEncoder().encode(secret)
+
+    const key = await crypto.subtle.importKey(
+      'raw',
+      keyData,
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['verify']
+    )
+
+    const signingInput = new TextEncoder().encode(parts[0] + '.' + parts[1])
+    const signature = base64UrlDecode(parts[2])
+
+    const valid = await crypto.subtle.verify('HMAC', key, signature.buffer as ArrayBuffer, signingInput)
+    if (!valid) return false
+
+    // Check expiry
+    const payloadJson = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')))
+    if (payloadJson.exp && payloadJson.exp < Math.floor(Date.now() / 1000)) return false
+
     return true
   } catch {
     return false
@@ -41,7 +70,7 @@ export async function middleware(req: NextRequest) {
     return NextResponse.next()
   }
 
-  // Allow known public paths and prefixes
+  // Allow known static paths
   if (
     pathname === '/favicon.ico' ||
     pathname === '/sw.js' ||
