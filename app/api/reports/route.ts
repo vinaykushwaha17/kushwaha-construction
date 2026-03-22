@@ -21,10 +21,10 @@ export async function GET(req: NextRequest) {
     const endDate = searchParams.get('endDate')
     const workerId = searchParams.get('workerId')
 
-    const start = startDate ? new Date(startDate) : new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
-    start.setHours(0, 0, 0, 0)
-    const end = endDate ? new Date(endDate) : new Date()
-    end.setHours(23, 59, 59, 999)
+    const startStr = startDate || new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0]
+    const endStr = endDate || new Date().toISOString().split('T')[0]
+    const start = new Date(startStr + 'T00:00:00.000Z')
+    const end = new Date(endStr + 'T23:59:59.999Z')
 
     if (type === 'worker') {
       const workerQuery = workerId ? { _id: workerId } : {}

@@ -22,16 +22,9 @@ export async function GET(req: NextRequest) {
     const query: Record<string, unknown> = {}
 
     if (date) {
-      const d = new Date(date)
-      const start = new Date(d.setHours(0, 0, 0, 0))
-      const end = new Date(d.setHours(23, 59, 59, 999))
-      query.date = { $gte: start, $lte: end }
+      query.date = { $gte: new Date(date + 'T00:00:00.000Z'), $lte: new Date(date + 'T23:59:59.999Z') }
     } else if (startDate && endDate) {
-      const start = new Date(startDate)
-      start.setHours(0, 0, 0, 0)
-      const end = new Date(endDate)
-      end.setHours(23, 59, 59, 999)
-      query.date = { $gte: start, $lte: end }
+      query.date = { $gte: new Date(startDate + 'T00:00:00.000Z'), $lte: new Date(endDate + 'T23:59:59.999Z') }
     }
 
     if (workerId) query.worker = workerId
@@ -59,8 +52,7 @@ export async function POST(req: NextRequest) {
     // Support bulk attendance: [{ workerId, date, status }]
     if (Array.isArray(body)) {
       const operations = body.map(({ workerId, date, status, notes }) => {
-        const d = new Date(date)
-        d.setHours(0, 0, 0, 0)
+        const d = new Date(date + 'T00:00:00.000Z')
         return {
           updateOne: {
             filter: { worker: workerId, date: d },
@@ -79,8 +71,7 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'workerId, date, and status are required' }, { status: 400 })
     }
 
-    const d = new Date(date)
-    d.setHours(0, 0, 0, 0)
+    const d = new Date(date + 'T00:00:00.000Z')
 
     const attendance = await Attendance.findOneAndUpdate(
       { worker: workerId, date: d },
@@ -104,9 +95,8 @@ export async function PUT(req: NextRequest) {
     await connectDB()
     const { date } = await req.json()
 
-    const d = new Date(date)
-    const start = new Date(d.setHours(0, 0, 0, 0))
-    const end = new Date(d.setHours(23, 59, 59, 999))
+    const start = new Date(date + 'T00:00:00.000Z')
+    const end = new Date(date + 'T23:59:59.999Z')
 
     const [workers, attendance] = await Promise.all([
       Worker.find({ status: 'active' }).lean<Array<{ _id: Types.ObjectId; name: string; phone: string; dailyWage: number; status: string }>>(),
